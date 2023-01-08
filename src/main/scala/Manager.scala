@@ -1,5 +1,9 @@
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
+import akka.util.Timeout
+
+import scala.concurrent.duration.SECONDS
+import scala.util.{Failure, Success}
 
 object Manager {
 
@@ -7,29 +11,29 @@ object Manager {
 
   final case class Delegate(forms: List[String]) extends Command
 
-  private final case class WorkerDoneAdapter(response: Worker.Response) extends Command
+  private final case class Report(description: String) extends Command
 
   def apply(): Behavior[Command] =
     Behaviors.setup { context =>
-      val adapter: ActorRef[Worker.Response] =
-        context.messageAdapter(response =>
-          WorkerDoneAdapter(response))
+      implicit val timeout: Timeout = Timeout(3, SECONDS)
 
-        Behaviors.receiveMessage { message =>
-          message match {
-            case Delegate(texts) =>
-              texts.map { text =>
-                val worker: ActorRef[Worker.Command] =
-                  context.spawn(Worker(), s"worker$text")
-                context.log.info(s"sending text '$text' to worker")
-                worker ! Worker.Parse(adapter, text)
-              }
-              Behaviors.same
-            case WorkerDoneAdapter(Worker.Done(text)) =>
-              context.log.info(s"text '$text' has been finished")
-              Behaviors.same
+      Behaviors.receiveMessage {
+        case Delegate(texts) =>
+          texts.foreach { text =>
+            val worker: ActorRef[Worker.Command] =
+              context.spawn(Worker(text), s"worker-$text")
+            context.ask(worker, Worker.Parse) {
+              case Success(Worker.Done) =>
+                Report(s"$text parsed by ${worker.path.name}")
+              case Failure(ex) =>
+                Report(s"parsing '$text' has failed with [${ex.getMessage}]")
+            }
           }
-        }
+          Behaviors.same
+        case Report(description) =>
+          context.log.info(description)
+          Behaviors.same
+      }
     }
 
 }
