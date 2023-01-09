@@ -17,12 +17,15 @@ object Manager {
     Behaviors.setup { context =>
       implicit val timeout: Timeout = Timeout(3, SECONDS)
 
+      def auxCreateRequest(text: String)(replyTo: ActorRef[Worker.Response]): Worker.Parse =
+        Worker.Parse(text, replyTo)
+
       Behaviors.receiveMessage {
         case Delegate(texts) =>
           texts.foreach { text =>
             val worker: ActorRef[Worker.Command] =
-              context.spawn(Worker(text), s"worker-$text")
-            context.ask(worker, Worker.Parse) {
+              context.spawn(Worker(), s"worker-$text")
+            context.ask(worker, auxCreateRequest(text)) {
               case Success(Worker.Done) =>
                 Report(s"$text parsed by ${worker.path.name}")
               case Failure(ex) =>

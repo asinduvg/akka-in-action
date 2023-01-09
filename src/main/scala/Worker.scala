@@ -7,16 +7,16 @@ object Worker {
 
   sealed trait Command
 
-  final case class Parse(replyTo: ActorRef[Worker.Response]) extends Command
+  final case class Parse(text: String, replyTo: ActorRef[Worker.Response]) extends Command
 
   sealed trait Response
 
   case object Done extends Response
 
-  def apply(text: String): Behavior[Command] =
+  def apply(): Behavior[Command] =
     Behaviors.receive { (context, message) =>
       message match {
-        case Parse(replyTo) =>
+        case Parse(text, replyTo) =>
           fakeLengthyParsing(text)
           context.log.info(
             s"${context.self.path.name}: done")
