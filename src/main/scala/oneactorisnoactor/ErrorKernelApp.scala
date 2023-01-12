@@ -1,3 +1,5 @@
+package oneactorisnoactor
+
 import akka.actor.typed.ActorSystem
 
 object ErrorKernelApp extends App {

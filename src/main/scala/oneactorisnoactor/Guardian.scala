@@ -1,5 +1,7 @@
-import akka.actor.typed.{ActorRef, Behavior}
+package oneactorisnoactor
+
 import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.{ActorRef, Behavior}
 
 object Guardian {
 
